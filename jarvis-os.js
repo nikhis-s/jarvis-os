@@ -1371,7 +1371,7 @@
         JARVIS.Audio.beep(550, 0.3, 'sine', 0.08);
 
         setTimeout(() => {
-          loginStatus.textContent = 'ACCESS GRANTED // WELCOME MONISH SIR';
+          loginStatus.textContent = 'ACCESS GRANTED // WELCOME OPERATOR';
           loginStatus.style.color = 'var(--green)';
           JARVIS.Audio.loginChime();
 

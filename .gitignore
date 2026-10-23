@@ -20,3 +20,5 @@ Thumbs.db
 
 # Windows temporary shortcut artifacts
 *.lnk
+
+.vercel

@@ -17,7 +17,17 @@
     "retro-futurism",
     "interactive-desktop"
   ],
-  "author": "Monish",
+  "author": "Monish (https://github.com/mdhanvantar-web)",
+  "contributors": [
+    {
+      "name": "Monish",
+      "url": "https://github.com/mdhanvantar-web"
+    },
+    {
+      "name": "nikhis-s",
+      "url": "https://github.com/nikhis-s"
+    }
+  ],
   "license": "MIT",
   "devDependencies": {
     "serve": "^14.2.4"

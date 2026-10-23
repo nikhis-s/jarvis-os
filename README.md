@@ -1,13 +1,22 @@
 # ⚡ J.A.R.V.I.S. Operating System
 
-[![Vercel Deployment](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com)
-[![Version](https://img.shields.io/badge/Version-7.0.1-00f0ff?style=for-the-badge)](https://github.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-0088ff?style=for-the-badge)](LICENSE)
-[![Theme: Stark HUD](https://img.shields.io/badge/Theme-Stark%20HUD-ffaa00?style=for-the-badge)](https://github.com)
+[![Vercel Deployment](https://img.shields.io/badge/Live%20Demo-jarvis--os--self.vercel.app-00f0ff?style=for-the-badge&logo=vercel)](https://jarvis-os-self.vercel.app)
+[![Version](https://img.shields.io/badge/Version-7.0.1-0088ff?style=for-the-badge)](https://github.com/nikhis-s/jarvis-os)
+[![License: MIT](https://img.shields.io/badge/License-MIT-00ff88?style=for-the-badge)](LICENSE)
+[![Theme: Stark HUD](https://img.shields.io/badge/Theme-Stark%20HUD-ffaa00?style=for-the-badge)](https://github.com/nikhis-s/jarvis-os)
 
-> *"Welcome Monish Sir. All systems nominal. Telemetry online."*
+> *"Welcome, Operator. All systems nominal. Telemetry online."*
 
 **J.A.R.V.I.S. OS** is a fully responsive, holographic web-based operating system inspired by the Stark Industries Mark-series HUD interfaces. Built with pure HTML5, vanilla JavaScript, CSS custom properties, and Web Audio API synthesis — with zero heavy runtime frameworks and zero external audio dependencies.
+
+---
+
+## 🌐 Live Production Deployment
+
+👉 **[https://jarvis-os-self.vercel.app](https://jarvis-os-self.vercel.app)**
+
+* **Master Passcode**: `151627`
+* Zero setup required — works directly in any desktop or mobile browser.
 
 ---
 
@@ -98,7 +107,7 @@ For Windows users, you can bind a global hotkey to pop open the OS from anywhere
 
 | User | Passcode |
 | :--- | :--- |
-| **Monish Sir** | `151627` |
+| **Operator** | `151627` |
 
 ---
 
@@ -110,6 +119,15 @@ For Windows users, you can bind a global hotkey to pop open the OS from anywhere
 * **Icons**: [Lucide Icons](https://lucide.dev)
 * **Fonts**: Orbitron, Rajdhani, Share Tech Mono (Google Fonts)
 * **Deployment**: Vercel Static Hosting (`vercel.json`)
+
+---
+
+## 👤 Contributors
+
+| Contributor | Role |
+| :--- | :--- |
+| **[Monish (@mdhanvantar-web)](https://github.com/mdhanvantar-web)** | Creator & Maintainer |
+| **[@nikhis-s](https://github.com/nikhis-s)** | Repository Owner & Contributor |
 
 ---
 
