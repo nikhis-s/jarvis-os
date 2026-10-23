@@ -269,6 +269,316 @@
       if (!parent || !parent.children[name]) throw new Error('Item not found');
       delete parent.children[name];
       return true;
+    },
+
+    pwd() {
+      return this.cwd;
+    }
+  };
+
+  /* ==========================================================================
+     3b. FORMATTERS + PYTHON CORE BRIDGE (JARVIS.Core)
+     ========================================================================== */
+  JARVIS.Utils = {
+    bytes(value) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) return 'n/a';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+      let amount = Number(value);
+      let index = 0;
+      while (Math.abs(amount) >= 1024 && index < units.length - 1) {
+        amount /= 1024;
+        index++;
+      }
+      return `${amount.toFixed(1)} ${units[index]}`;
+    },
+
+    duration(seconds) {
+      if (seconds === null || seconds === undefined) return 'n/a';
+      let total = Math.max(0, Math.floor(Number(seconds) || 0));
+      const days = Math.floor(total / 86400);
+      total %= 86400;
+      const hours = Math.floor(total / 3600);
+      total %= 3600;
+      const minutes = Math.floor(total / 60);
+      const secs = total % 60;
+      const clock = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+      return days ? `${days}d ${clock}` : clock;
+    },
+
+    escapeHtml(value) {
+      return String(value === null || value === undefined ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  };
+
+  JARVIS.Core = {
+    defaultUrl: 'http://127.0.0.1:8765',
+    baseUrl: 'http://127.0.0.1:8765',
+    passcode: '151627',
+    token: null,
+    tokenExpiry: 0,
+    state: 'offline',
+    online: false,
+    lastError: '',
+    health: null,
+    status: null,
+    telemetryData: null,
+    processData: null,
+    _listeners: new Set(),
+    _pollTimer: null,
+    _inflight: null,
+    _started: false,
+    _failures: 0,
+
+    init() {
+      if (this._started) return this;
+      this._started = true;
+      this.baseUrl = (window.JARVIS_CORE_URL || localStorage.getItem('jarvis-core-url') || this.defaultUrl).replace(/\/+$/, '');
+      this.passcode = localStorage.getItem('jarvis-core-passcode') || this.passcode;
+      this.bindTray();
+      this.updateTray();
+      this.poll(true);
+      this._pollTimer = setInterval(() => this.poll(), 5000);
+      return this;
+    },
+
+    setBaseUrl(url) {
+      const clean = String(url || '').trim().replace(/\/+$/, '');
+      if (!/^https?:\/\//i.test(clean)) throw new Error('Core URL must start with http:// or https://');
+      this.baseUrl = clean;
+      localStorage.setItem('jarvis-core-url', clean);
+      this.token = null;
+      this.tokenExpiry = 0;
+      this.state = 'probing';
+      this.updateTray();
+      this.poll(true);
+      return clean;
+    },
+
+    setPasscode(passcode) {
+      const clean = String(passcode || '').trim();
+      if (!clean) throw new Error('A core passcode is required');
+      this.passcode = clean;
+      localStorage.setItem('jarvis-core-passcode', clean);
+      this.token = null;
+      this.tokenExpiry = 0;
+      return clean;
+    },
+
+    snapshot() {
+      return {
+        state: this.state,
+        online: this.online,
+        baseUrl: this.baseUrl,
+        error: this.lastError,
+        health: this.health,
+        status: this.status,
+        telemetry: this.telemetryData,
+        processes: this.processData
+      };
+    },
+
+    subscribe(listener) {
+      this._listeners.add(listener);
+      try {
+        listener(this.snapshot());
+      } catch (e) {}
+      return () => this._listeners.delete(listener);
+    },
+
+    emit() {
+      const snap = this.snapshot();
+      this._listeners.forEach(listener => {
+        try {
+          listener(snap);
+        } catch (e) {}
+      });
+      this.updateTray();
+    },
+
+    bindTray() {
+      const tray = document.getElementById('tray-core');
+      if (!tray || tray.dataset.bound === 'true') return;
+      tray.dataset.bound = 'true';
+      tray.onclick = () => {
+        JARVIS.Audio.click();
+        JARVIS.WM.open('core');
+      };
+    },
+
+    updateTray() {
+      const tray = document.getElementById('tray-core');
+      const label = document.getElementById('core-label');
+      if (!tray || !label) return;
+      tray.classList.remove('online', 'offline', 'probing');
+      tray.classList.add(this.state);
+      if (this.state === 'online') {
+        label.textContent = 'CORE // ONLINE';
+        tray.title = `Python core ${this.health ? this.health.version : ''} at ${this.baseUrl}`;
+      } else if (this.state === 'probing') {
+        label.textContent = 'CORE // LINK';
+        tray.title = `Probing Python core at ${this.baseUrl}`;
+      } else {
+        label.textContent = 'CORE // OFFLINE';
+        tray.title = this.lastError || `Python core not reachable at ${this.baseUrl}`;
+      }
+    },
+
+    describeError(error) {
+      if (!error) return 'Unknown core error';
+      if (error.name === 'AbortError') return 'Core request timed out';
+      if (error instanceof TypeError && /fetch/i.test(error.message || '')) {
+        if (window.location.protocol === 'https:' && this.baseUrl.startsWith('http://')) {
+          return 'Browser blocked the HTTP core link from an HTTPS page. Run the HUD locally or use a tunnel.';
+        }
+        return `Python core unreachable at ${this.baseUrl}. Run: python run_jarvis_core.py`;
+      }
+      return error.message || String(error);
+    },
+
+    async request(path, options = {}) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), options.timeout || 5000);
+      const headers = Object.assign({}, options.headers || {});
+      if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+      if (options.auth) {
+        await this.ensureToken();
+        headers.Authorization = `Bearer ${this.token}`;
+      }
+      try {
+        const response = await fetch(this.baseUrl + path, {
+          method: options.method || 'GET',
+          headers,
+          body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        const text = await response.text();
+        let data = null;
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch (e) {
+            data = text;
+          }
+        }
+        if (!response.ok) {
+          const detail = data && data.detail ? data.detail : `HTTP ${response.status}`;
+          const error = new Error(detail);
+          error.status = response.status;
+          throw error;
+        }
+        return data;
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+
+    async ensureToken(force = false) {
+      if (!force && this.token && this.tokenExpiry > Date.now() / 1000 + 30) {
+        return this.token;
+      }
+      const data = await this.request('/api/auth/login', {
+        method: 'POST',
+        body: { passcode: this.passcode }
+      });
+      this.token = data.token;
+      this.tokenExpiry = Number(data.expires_at) || (Date.now() / 1000 + 3600);
+      return this.token;
+    },
+
+    async login(passcode) {
+      if (passcode) this.setPasscode(passcode);
+      this.token = null;
+      this.tokenExpiry = 0;
+      const data = await this.ensureToken(true);
+      this.state = 'online';
+      this.online = true;
+      this.lastError = '';
+      this.updateTray();
+      return data;
+    },
+
+    async poll(deep = false) {
+      if (this._inflight) return this._inflight;
+      if (!this.online) this.state = 'probing';
+      this.updateTray();
+      this._inflight = (async () => {
+        try {
+          const health = await this.request('/api/health', { timeout: 3000 });
+          this.health = health;
+          this.online = true;
+          this.state = 'online';
+          this.lastError = '';
+          this._failures = 0;
+          const [telemetry, processes, status] = await Promise.all([
+            this.request('/api/telemetry', { timeout: 4000 }).catch(() => this.telemetryData),
+            this.request('/api/processes?limit=6', { timeout: 4000 }).catch(() => this.processData),
+            deep ? this.request('/api/status', { timeout: 4000 }).catch(() => this.status) : Promise.resolve(this.status)
+          ]);
+          if (telemetry) this.telemetryData = telemetry;
+          if (processes) this.processData = processes;
+          if (status) this.status = status;
+        } catch (error) {
+          this._failures++;
+          this.online = false;
+          this.state = 'offline';
+          this.lastError = this.describeError(error);
+        }
+        this._inflight = null;
+        this.emit();
+      })();
+      return this._inflight;
+    },
+
+    async telemetry() {
+      const data = await this.request('/api/telemetry', { timeout: 4000 });
+      this.telemetryData = data;
+      this.online = true;
+      this.state = 'online';
+      this.emit();
+      return data;
+    },
+
+    async processes(limit = 8) {
+      const data = await this.request(`/api/processes?limit=${encodeURIComponent(limit)}`, { timeout: 4000 });
+      this.processData = data;
+      return data;
+    },
+
+    async command(command, cwd = '/home/operator') {
+      const send = () => this.request('/api/command', {
+        method: 'POST',
+        auth: true,
+        timeout: 10000,
+        body: { command, cwd }
+      });
+      try {
+        const result = await send();
+        this.online = true;
+        this.state = 'online';
+        this.lastError = '';
+        this.updateTray();
+        return result;
+      } catch (error) {
+        if (error.status === 401) {
+          await this.ensureToken(true);
+          return send();
+        }
+        throw error;
+      }
+    },
+
+    async neofetch() {
+      return this.request('/api/neofetch', { timeout: 4000 });
+    },
+
+    docsUrl() {
+      return `${this.baseUrl}/api/docs`;
     }
   };
 
@@ -304,6 +614,7 @@
       winEl.style.height = h + 'px';
       winEl.style.zIndex = ++this.nextZ;
       winEl._intervals = [];
+      winEl._cleanups = [];
 
       winEl.innerHTML = `
         <div class="window-titlebar">
@@ -365,6 +676,13 @@
       if (!win) return;
       if (win.el._intervals) {
         win.el._intervals.forEach(clearInterval);
+      }
+      if (win.el._cleanups) {
+        win.el._cleanups.forEach(cleanup => {
+          try {
+            cleanup();
+          } catch (e) {}
+        });
       }
       if (win.el.parentNode) win.el.parentNode.removeChild(win.el);
       this.windows.delete(winId);
@@ -617,6 +935,7 @@
           contextMenu.style.display = 'none';
           if (act === 'open-term') JARVIS.WM.open('terminal');
           else if (act === 'new-file') JARVIS.WM.open('editor', { newFile: true });
+          else if (act === 'core') JARVIS.WM.open('core');
           else if (act === 'monitor') JARVIS.WM.open('monitor');
           else if (act === 'settings') JARVIS.WM.open('settings');
           else if (act === 'refresh') {
@@ -678,10 +997,30 @@
           output.scrollTop = output.scrollHeight;
         };
 
-        print('STARK INDUSTRIES // MARK-VII SECURE SHELL', 'info');
-        print('Type "help" for a list of available directives. Type "neofetch" for system telemetry.\\n');
+        const runCore = async (directive) => {
+          if (!JARVIS.Core.online) {
+            await JARVIS.Core.poll();
+          }
+          if (!JARVIS.Core.online) {
+            print(`Python core offline // ${JARVIS.Core.lastError}`, 'warn');
+            print('Start it with: python run_jarvis_core.py', 'warn');
+            return false;
+          }
+          try {
+            const result = await JARVIS.Core.command(directive, '/home/operator');
+            (result.output || []).forEach(line => print(line));
+            if (result.exit_code) print(`[exit code ${result.exit_code}]`, 'error');
+            return true;
+          } catch (error) {
+            print(`core error: ${JARVIS.Core.describeError(error)}`, 'error');
+            return false;
+          }
+        };
 
-        const exec = (cmdLine) => {
+        print('STARK INDUSTRIES // MARK-VII SECURE SHELL', 'info');
+        print('Local shell + Python core bridge online. Type "help" for directives.\\n');
+
+        const exec = async (cmdLine) => {
           const trimmed = cmdLine.trim();
           if (!trimmed) return;
           history.push(trimmed);
@@ -695,21 +1034,102 @@
           switch (cmd) {
             case 'help':
               print('Available commands:');
-              print('  help         - Show directives summary');
-              print('  clear        - Clear console stream');
-              print('  ls [path]    - List files/folders');
-              print('  cd <path>    - Change working directory');
-              print('  cat <file>   - Output file content');
-              print('  pwd          - Print active directory');
-              print('  touch <file> - Create empty text file');
-              print('  mkdir <dir>  - Create subfolder');
-              print('  rm <target>  - Delete target');
-              print('  echo <text>  - Echo text');
-              print('  date         - Current satellite timestamp');
-              print('  whoami       - Active user session');
-              print('  neofetch     - Hardware & neural telemetry');
-              print('  exit         - Terminate shell process');
+              print('  help              - Show directives summary');
+              print('  clear             - Clear console stream');
+              print('  ls [path]         - List local VFS files/folders');
+              print('  cd <path>         - Change local working directory');
+              print('  cat <file>        - Output local file content');
+              print('  pwd               - Print active directory');
+              print('  touch <file>      - Create empty text file');
+              print('  mkdir <dir>       - Create subfolder');
+              print('  rm <target>       - Delete local target');
+              print('  echo <text>       - Echo text');
+              print('  date              - Current satellite timestamp');
+              print('  whoami            - Active user session');
+              print('  sysinfo           - Python core hardware telemetry');
+              print('  ps [limit]        - Python core process monitor');
+              print('  metrics           - Prometheus metrics from the core');
+              print('  core              - Show Python core link status');
+              print('  core auth <code>  - Authenticate with the core');
+              print('  core exec <cmd>   - Execute a directive in the core');
+              print('  core url [url]    - Show or set the core endpoint');
+              print('  neofetch          - Real telemetry (falls back offline)');
+              print('  exit              - Terminate shell process');
               break;
+
+            case 'sysinfo':
+              await runCore('sysinfo');
+              break;
+
+            case 'ps':
+              await runCore('ps' + (args[0] ? ' ' + args[0] : ''));
+              break;
+
+            case 'metrics':
+              await runCore('metrics');
+              break;
+
+            case 'core': {
+              const sub = (args[0] || 'status').toLowerCase();
+              if (sub === 'auth') {
+                const pass = args[1] || JARVIS.Core.passcode;
+                if (!pass) {
+                  print('Usage: core auth <passcode>', 'warn');
+                  break;
+                }
+                try {
+                  await JARVIS.Core.login(pass);
+                  print('CORE AUTHENTICATED // bearer token acquired', 'info');
+                  JARVIS.Notify.show('PYTHON CORE', 'Bearer token acquired. Authenticated directives unlocked.');
+                } catch (error) {
+                  print(`core auth failed: ${JARVIS.Core.describeError(error)}`, 'error');
+                }
+                break;
+              }
+              if (sub === 'exec') {
+                const directive = args.slice(1).join(' ');
+                if (!directive) {
+                  print('Usage: core exec <directive>', 'warn');
+                  break;
+                }
+                await runCore(directive);
+                break;
+              }
+              if (sub === 'url') {
+                if (args[1]) {
+                  try {
+                    JARVIS.Core.setBaseUrl(args[1]);
+                    print(`core endpoint set to ${JARVIS.Core.baseUrl}`, 'info');
+                  } catch (error) {
+                    print(error.message, 'error');
+                  }
+                } else {
+                  print(`core endpoint: ${JARVIS.Core.baseUrl}`, 'info');
+                }
+                break;
+              }
+              if (sub === 'help') {
+                print('core status        - Probe link and print metadata');
+                print('core auth <code>   - Exchange passcode for a bearer token');
+                print('core exec <cmd>    - Run a whitelisted core directive');
+                print('core url [url]     - Show or persist the endpoint');
+                break;
+              }
+              await JARVIS.Core.poll(true);
+              if (!JARVIS.Core.online) {
+                print(`core offline: ${JARVIS.Core.lastError}`, 'error');
+                print('Start it with: python run_jarvis_core.py', 'warn');
+                break;
+              }
+              const snap = JARVIS.Core.snapshot();
+              print(`CORE LINK ACTIVE // ${snap.baseUrl}`, 'info');
+              print(`version  : ${snap.health ? snap.health.version : 'n/a'}`);
+              print(`python   : ${snap.health ? snap.health.python_version : 'n/a'}`);
+              print(`platform : ${snap.health ? snap.health.platform : 'n/a'}`);
+              print(`telemetry: ${snap.health ? snap.health.telemetry_source : 'n/a'} // uptime ${JARVIS.Utils.duration(snap.health ? snap.health.uptime_seconds : null)}`);
+              print(`commands : ${snap.status ? snap.status.command_count : 'n/a'} // processes ${snap.status ? snap.status.process_count : 'n/a'}`);
+              break;
+            }
 
             case 'clear':
               output.innerHTML = '';
@@ -801,20 +1221,31 @@
               }
               break;
 
-            case 'neofetch':
-              const ascii = [
-                '          .---.          ',
-                '         /     \\\\         OS: J.A.R.V.I.S. OS 7.0.1 x86_64',
-                '        | () () |        Host: Stark Industries Arc Mainframe',
-                '         \\\\  ^  /        Kernel: STARK_NT 7.0.1-Release',
-                '          |||||          Uptime: 42 days, 13 hours',
-                '          \'---\'          Shell: stark-sh 4.2',
-                '         /     \\\\         Resolution: 3840x2160 (HUD Holo)',
-                '        /|     |\\\\        CPU: JARVIS Neural Array @ 4.8 THz',
-                '       (_|     |_)       Memory: 41.2 PB / 256 PB'
-              ];
-              print(ascii.join('\\n'), 'info');
+            case 'neofetch': {
+              let rendered = false;
+              if (JARVIS.Core.online) {
+                try {
+                  const card = await JARVIS.Core.neofetch();
+                  print((card.lines || []).join('\\n'), 'info');
+                  rendered = true;
+                } catch (e) {}
+              }
+              if (!rendered) {
+                const ascii = [
+                  '          .---.          ',
+                  '         /     \\\\         OS: J.A.R.V.I.S. OS 7.0.1 x86_64',
+                  '        | () () |        Host: Stark Industries Arc Mainframe',
+                  '         \\\\  ^  /        Python Core: OFFLINE // simulated card',
+                  '          |||||          Uptime: 42 days, 13 hours',
+                  '          \'---\'          Shell: stark-sh 4.2',
+                  '         /     \\\\         Resolution: 3840x2160 (HUD Holo)',
+                  '        /|     |\\\\        CPU: JARVIS Neural Array @ 4.8 THz',
+                  '       (_|     |_)       Memory: 41.2 PB / 256 PB'
+                ];
+                print(ascii.join('\\n'), 'info');
+              }
               break;
+            }
 
             case 'exit':
               JARVIS.WM.close(win.id);
@@ -829,7 +1260,7 @@
           if (e.key === 'Enter') {
             const val = input.value;
             input.value = '';
-            exec(val);
+            exec(val).catch(error => print(error.message, 'error'));
           } else if (e.key === 'ArrowUp') {
             if (historyIdx > 0) {
               historyIdx--;
@@ -977,30 +1408,35 @@
     monitor: {
       name: 'Diagnostics // System Monitor',
       icon: 'activity',
-      width: 650,
-      height: 520,
+      width: 680,
+      height: 560,
       render(el, win) {
         el.className = 'app-monitor';
         el.innerHTML = `
+          <div class="monitor-section monitor-core-head">
+            <div class="monitor-title">PYTHON CORE // <span id="monState" class="monitor-core-state">PROBING</span></div>
+            <div class="monitor-stat"><span>Endpoint:</span><span class="stat-val" id="monEndpoint">${JARVIS.Utils.escapeHtml(JARVIS.Core.baseUrl)}</span></div>
+            <div class="monitor-stat"><span>Telemetry Source:</span><span class="stat-val" id="monSource">simulated // waiting for core</span></div>
+          </div>
           <div class="monitor-section">
             <div class="monitor-title">NEURAL PROCESSING UNIT // CPU TELEMETRY</div>
             <canvas class="monitor-canvas" id="cpuChart"></canvas>
-            <div class="monitor-stat"><span>Core Frequency:</span><span class="stat-val">4.80 GHz</span></div>
-            <div class="monitor-stat"><span>Aggregate Load:</span><span class="stat-val" id="cpuPct">45%</span></div>
+            <div class="monitor-stat"><span>Core Frequency:</span><span class="stat-val" id="cpuFreq">n/a</span></div>
+            <div class="monitor-stat"><span>Aggregate Load:</span><span class="stat-val" id="cpuPct">0%</span></div>
+            <div class="monitor-stat"><span>Load Average:</span><span class="stat-val" id="cpuLoad">n/a</span></div>
           </div>
           <div class="monitor-section">
             <div class="monitor-title">QUANTUM RAM ALLOCATION</div>
             <canvas class="monitor-canvas" id="ramChart"></canvas>
-            <div class="monitor-stat"><span>Active Utilization:</span><span class="stat-val" id="ramPct">62% (158 PB / 256 PB)</span></div>
+            <div class="monitor-stat"><span>Active Utilization:</span><span class="stat-val" id="ramPct">0%</span></div>
+            <div class="monitor-stat"><span>Disk Capacity:</span><span class="stat-val" id="diskPct">n/a</span></div>
+            <div class="monitor-stat"><span>Network I/O:</span><span class="stat-val" id="netRate">n/a</span></div>
           </div>
           <div class="monitor-section" style="flex:1;">
             <div class="monitor-title">TOP CONSUMPTION PROCESSES</div>
-            <div class="process-list">
+            <div class="process-list" id="monProcesses">
               <div class="process-header"><div>PROCESS NAME</div><div>PID</div><div>CPU%</div><div>RAM</div></div>
-              <div class="process-row"><div>jarvis-kernel</div><div>101</div><div>12.4%</div><div>2.1 PB</div></div>
-              <div class="process-row"><div>holo-compositor</div><div>108</div><div>18.2%</div><div>8.4 PB</div></div>
-              <div class="process-row"><div>stark-net-mesh</div><div>142</div><div>4.5%</div><div>1.2 PB</div></div>
-              <div class="process-row"><div>biometric-eval</div><div>199</div><div>3.1%</div><div>0.8 PB</div></div>
+              <div class="process-row"><div>waiting for python core...</div><div>--</div><div>--</div><div>--</div></div>
             </div>
           </div>
         `;
@@ -1009,23 +1445,33 @@
         const ramCanvas = el.querySelector('#ramChart');
         const cpuLabel = el.querySelector('#cpuPct');
         const ramLabel = el.querySelector('#ramPct');
+        const freqLabel = el.querySelector('#cpuFreq');
+        const loadLabel = el.querySelector('#cpuLoad');
+        const diskLabel = el.querySelector('#diskPct');
+        const netLabel = el.querySelector('#netRate');
+        const stateLabel = el.querySelector('#monState');
+        const sourceLabel = el.querySelector('#monSource');
+        const endpointLabel = el.querySelector('#monEndpoint');
+        const processList = el.querySelector('#monProcesses');
 
         const initCanvas = (canvas) => {
+          if (!canvas) return;
           canvas.width = canvas.offsetWidth || 580;
           canvas.height = 110;
         };
         setTimeout(() => { initCanvas(cpuCanvas); initCanvas(ramCanvas); }, 50);
 
-        const cpuHistory = Array(50).fill(35);
-        const ramHistory = Array(50).fill(55);
+        const cpuHistory = Array(50).fill(0);
+        const ramHistory = Array(50).fill(0);
 
         const drawChart = (canvas, data, strokeColor, fillColor) => {
+          if (!canvas) return;
+          if (!canvas.width) canvas.width = canvas.offsetWidth || 580;
           const ctx = canvas.getContext('2d');
           const w = canvas.width;
           const h = canvas.height;
           ctx.clearRect(0, 0, w, h);
 
-          // Grid lines
           ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
           ctx.lineWidth = 1;
           for (let y = 20; y < h; y += 25) {
@@ -1035,7 +1481,6 @@
             ctx.stroke();
           }
 
-          // Line graph
           ctx.beginPath();
           const step = w / (data.length - 1);
           data.forEach((val, idx) => {
@@ -1048,7 +1493,6 @@
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          // Gradient fill under curve
           ctx.lineTo(w, h);
           ctx.lineTo(0, h);
           ctx.closePath();
@@ -1056,20 +1500,342 @@
           ctx.fill();
         };
 
-        const interval = setInterval(() => {
-          const newCpu = Math.floor(30 + Math.random() * 45);
-          const newRam = Math.floor(58 + Math.random() * 10);
-          cpuHistory.shift(); cpuHistory.push(newCpu);
-          ramHistory.shift(); ramHistory.push(newRam);
-
-          if (cpuLabel) cpuLabel.textContent = `${newCpu}%`;
-          if (ramLabel) ramLabel.textContent = `${newRam}% (${Math.floor(256 * (newRam/100))} PB / 256 PB)`;
-
+        const pushSample = (cpuPercent, ramPercent) => {
+          cpuHistory.shift();
+          cpuHistory.push(cpuPercent);
+          ramHistory.shift();
+          ramHistory.push(ramPercent);
           drawChart(cpuCanvas, cpuHistory, '#00f0ff', 'rgba(0, 240, 255, 0.15)');
           drawChart(ramCanvas, ramHistory, '#0088ff', 'rgba(0, 136, 255, 0.15)');
-        }, 800);
+        };
+
+        const renderProcesses = (processes) => {
+          if (!processList || !processes || !processes.processes) return;
+          const rows = processes.processes.map(process => `
+            <div class="process-row">
+              <div>${JARVIS.Utils.escapeHtml(process.name)}</div>
+              <div>${process.pid}</div>
+              <div>${Number(process.cpu_percent || 0).toFixed(1)}%</div>
+              <div>${JARVIS.Utils.bytes(process.memory_rss)}</div>
+            </div>
+          `).join('');
+          processList.innerHTML = `
+            <div class="process-header"><div>PROCESS NAME</div><div>PID</div><div>CPU%</div><div>RAM</div></div>
+            ${rows || '<div class="process-row"><div>no processes returned</div><div>--</div><div>--</div><div>--</div></div>'}
+          `;
+        };
+
+        const applyTelemetry = (data, processes) => {
+          if (!data) return false;
+          const cpu = data.cpu || {};
+          const memory = data.memory || {};
+          const disk = data.disk || {};
+          const network = data.network || {};
+          const cpuPercent = Number(cpu.percent || 0);
+          const ramPercent = Number(memory.percent || 0);
+
+          if (cpuLabel) cpuLabel.textContent = `${cpuPercent.toFixed(1)}%`;
+          if (ramLabel) ramLabel.textContent = `${JARVIS.Utils.bytes(memory.used)} / ${JARVIS.Utils.bytes(memory.total)} (${ramPercent.toFixed(1)}%)`;
+          if (freqLabel) freqLabel.textContent = cpu.frequency_mhz ? `${(cpu.frequency_mhz / 1000).toFixed(2)} GHz` : 'n/a';
+          if (loadLabel) loadLabel.textContent = (cpu.load_average || []).map(v => Number(v).toFixed(2)).join(', ') || 'n/a';
+          if (diskLabel) diskLabel.textContent = `${JARVIS.Utils.bytes(disk.used)} / ${JARVIS.Utils.bytes(disk.total)} (${Number(disk.percent || 0).toFixed(1)}%)`;
+          if (netLabel) netLabel.textContent = `up ${JARVIS.Utils.bytes(network.upload_bps)}/s // down ${JARVIS.Utils.bytes(network.download_bps)}/s`;
+          if (sourceLabel) sourceLabel.textContent = `${data.source || 'unknown'} // Python ${data.python_version || '?'}`;
+          renderProcesses(processes);
+          pushSample(cpuPercent, ramPercent);
+          return true;
+        };
+
+        const simulate = () => {
+          const cpuPercent = Math.floor(30 + Math.random() * 45);
+          const ramPercent = Math.floor(58 + Math.random() * 10);
+          if (cpuLabel) cpuLabel.textContent = `${cpuPercent}%`;
+          if (ramLabel) ramLabel.textContent = `${ramPercent}% (simulated)`;
+          if (freqLabel) freqLabel.textContent = '4.80 GHz (simulated)';
+          if (loadLabel) loadLabel.textContent = 'simulated';
+          if (diskLabel) diskLabel.textContent = 'simulated';
+          if (netLabel) netLabel.textContent = 'simulated';
+          if (sourceLabel) sourceLabel.textContent = 'simulated // python core offline';
+          pushSample(cpuPercent, ramPercent);
+        };
+
+        const setStatus = (snap) => {
+          if (!stateLabel) return;
+          stateLabel.textContent = (snap.state || 'offline').toUpperCase();
+          stateLabel.classList.remove('online', 'offline', 'probing');
+          stateLabel.classList.add(snap.state || 'offline');
+          if (endpointLabel) endpointLabel.textContent = snap.baseUrl || 'n/a';
+          if (!snap.online && sourceLabel) sourceLabel.textContent = snap.error || 'python core offline';
+        };
+
+        const unsubscribe = JARVIS.Core.subscribe(snap => {
+          setStatus(snap);
+          if (snap.telemetry) applyTelemetry(snap.telemetry, snap.processes);
+        });
+        win.el._cleanups.push(unsubscribe);
+        setTimeout(() => JARVIS.Core.poll(), 100);
+
+        const interval = setInterval(() => {
+          const snap = JARVIS.Core.snapshot();
+          if (snap.telemetry) {
+            applyTelemetry(snap.telemetry, snap.processes);
+          } else {
+            simulate();
+          }
+        }, 1200);
 
         win.el._intervals.push(interval);
+      }
+    },
+
+    // ----------------------------------------------------
+    // Python Core Bridge / Control Center
+    // ----------------------------------------------------
+    core: {
+      name: 'Python Core // Bridge',
+      icon: 'cpu',
+      width: 780,
+      height: 600,
+      render(el, win) {
+        el.className = 'app-core';
+        el.innerHTML = `
+          <div class="core-hero">
+            <div class="core-orb"><i data-lucide="cpu"></i></div>
+            <div class="core-hero-copy">
+              <div class="core-kicker">PYTHON CORE // FASTAPI + PSUTIL</div>
+              <div class="core-title"><span id="coreStateDot" class="core-dot offline"></span><span id="coreStateText">PROBING LINK</span></div>
+              <div class="core-sub" id="coreSub">Connecting to the local intelligence service...</div>
+            </div>
+            <button class="core-btn" id="coreRefreshBtn" type="button">REFRESH</button>
+          </div>
+
+          <div class="core-metrics">
+            <div class="core-metric">
+              <span>CPU</span>
+              <strong id="coreCpu">--</strong>
+              <small id="coreCpuSub">waiting for telemetry</small>
+            </div>
+            <div class="core-metric">
+              <span>MEMORY</span>
+              <strong id="coreMem">--</strong>
+              <small id="coreMemSub">waiting for telemetry</small>
+            </div>
+            <div class="core-metric">
+              <span>DISK</span>
+              <strong id="coreDisk">--</strong>
+              <small id="coreDiskSub">waiting for telemetry</small>
+            </div>
+            <div class="core-metric">
+              <span>NETWORK</span>
+              <strong id="coreNet">--</strong>
+              <small id="coreNetSub">waiting for telemetry</small>
+            </div>
+          </div>
+
+          <div class="core-columns">
+            <section class="core-panel">
+              <div class="core-panel-title">CORE METADATA</div>
+              <div class="core-kv"><span>Endpoint</span><code id="coreEndpoint">${JARVIS.Utils.escapeHtml(JARVIS.Core.baseUrl)}</code></div>
+              <div class="core-kv"><span>Version</span><code id="coreVersion">--</code></div>
+              <div class="core-kv"><span>Python</span><code id="corePython">--</code></div>
+              <div class="core-kv"><span>Platform</span><code id="corePlatform">--</code></div>
+              <div class="core-kv"><span>Host</span><code id="coreHost">--</code></div>
+              <div class="core-kv"><span>Uptime</span><code id="coreUptime">--</code></div>
+              <div class="core-kv"><span>Directives</span><code id="coreCommandCount">--</code></div>
+              <div class="core-kv"><span>Telemetry</span><code id="coreSource">--</code></div>
+              <div class="core-auth-row">
+                <input id="corePasscode" type="password" placeholder="CORE PASSCODE" autocomplete="off">
+                <button class="core-btn primary" id="coreAuthBtn" type="button">AUTH</button>
+                <button class="core-btn" id="coreDocsBtn" type="button">DOCS</button>
+              </div>
+              <div class="core-note" id="coreNote"></div>
+            </section>
+
+            <section class="core-panel">
+              <div class="core-panel-title">TOP PROCESSES</div>
+              <div class="core-process-list" id="coreProcesses">
+                <div class="core-process-head"><span>PROCESS</span><span>PID</span><span>CPU</span><span>RSS</span></div>
+                <div class="core-process-row"><span>waiting for core...</span><span>--</span><span>--</span><span>--</span></div>
+              </div>
+            </section>
+          </div>
+
+          <section class="core-panel core-console-panel">
+            <div class="core-panel-title">DIRECTIVE CONSOLE</div>
+            <div class="core-console" id="coreConsole"></div>
+            <div class="core-run-row">
+              <span class="core-prompt">&gt;</span>
+              <input id="coreDirective" type="text" placeholder="sysinfo  |  ps  |  neofetch  |  core" autocomplete="off" spellcheck="false">
+              <button class="core-btn primary" id="coreRunBtn" type="button">RUN</button>
+            </div>
+          </section>
+        `;
+
+        const stateDot = el.querySelector('#coreStateDot');
+        const stateText = el.querySelector('#coreStateText');
+        const subText = el.querySelector('#coreSub');
+        const endpointEl = el.querySelector('#coreEndpoint');
+        const versionEl = el.querySelector('#coreVersion');
+        const pythonEl = el.querySelector('#corePython');
+        const platformEl = el.querySelector('#corePlatform');
+        const hostEl = el.querySelector('#coreHost');
+        const uptimeEl = el.querySelector('#coreUptime');
+        const commandCountEl = el.querySelector('#coreCommandCount');
+        const sourceEl = el.querySelector('#coreSource');
+        const noteEl = el.querySelector('#coreNote');
+        const cpuEl = el.querySelector('#coreCpu');
+        const cpuSubEl = el.querySelector('#coreCpuSub');
+        const memEl = el.querySelector('#coreMem');
+        const memSubEl = el.querySelector('#coreMemSub');
+        const diskEl = el.querySelector('#coreDisk');
+        const diskSubEl = el.querySelector('#coreDiskSub');
+        const netEl = el.querySelector('#coreNet');
+        const netSubEl = el.querySelector('#coreNetSub');
+        const processEl = el.querySelector('#coreProcesses');
+        const consoleEl = el.querySelector('#coreConsole');
+        const directiveInput = el.querySelector('#coreDirective');
+        const passcodeInput = el.querySelector('#corePasscode');
+        let cwd = '/home/operator';
+
+        const log = (text, type = '') => {
+          const line = document.createElement('div');
+          line.className = `core-console-line ${type}`.trim();
+          line.textContent = text;
+          consoleEl.appendChild(line);
+          consoleEl.scrollTop = consoleEl.scrollHeight;
+        };
+
+        const renderProcesses = (processes) => {
+          if (!processes || !processes.processes) return;
+          const rows = processes.processes.map(process => `
+            <div class="core-process-row">
+              <span>${JARVIS.Utils.escapeHtml(process.name)}</span>
+              <span>${process.pid}</span>
+              <span>${Number(process.cpu_percent || 0).toFixed(1)}%</span>
+              <span>${JARVIS.Utils.bytes(process.memory_rss)}</span>
+            </div>
+          `).join('');
+          processEl.innerHTML = `
+            <div class="core-process-head"><span>PROCESS</span><span>PID</span><span>CPU</span><span>RSS</span></div>
+            ${rows || '<div class="core-process-row"><span>no processes returned</span><span>--</span><span>--</span><span>--</span></div>'}
+          `;
+        };
+
+        const render = (snap) => {
+          const online = !!snap.online;
+          if (stateDot) {
+            stateDot.classList.remove('online', 'offline', 'probing');
+            stateDot.classList.add(snap.state || 'offline');
+          }
+          if (stateText) stateText.textContent = online ? 'LINK ACTIVE' : (snap.state === 'probing' ? 'PROBING LINK' : 'CORE OFFLINE');
+          if (subText) {
+            subText.textContent = online
+              ? `${snap.health.service || 'jarvis-core'} // Python ${snap.health.python_version || '?'} // ${snap.health.telemetry_source || 'telemetry'}`
+              : (snap.error || 'Python core not reachable.');
+          }
+          if (endpointEl) endpointEl.textContent = snap.baseUrl || 'n/a';
+          if (versionEl) versionEl.textContent = snap.health ? snap.health.version : '--';
+          if (pythonEl) pythonEl.textContent = snap.health ? snap.health.python_version : '--';
+          if (platformEl) platformEl.textContent = snap.health ? snap.health.platform : '--';
+          if (hostEl) hostEl.textContent = snap.health ? snap.health.hostname : '--';
+          if (uptimeEl) uptimeEl.textContent = snap.health ? JARVIS.Utils.duration(snap.health.uptime_seconds) : '--';
+          if (commandCountEl) commandCountEl.textContent = snap.status ? snap.status.command_count : '--';
+          if (sourceEl) sourceEl.textContent = snap.health ? snap.health.telemetry_source : '--';
+
+          if (snap.telemetry) {
+            const telemetry = snap.telemetry;
+            const cpu = telemetry.cpu || {};
+            const memory = telemetry.memory || {};
+            const disk = telemetry.disk || {};
+            const network = telemetry.network || {};
+            if (cpuEl) cpuEl.textContent = `${Number(cpu.percent || 0).toFixed(1)}%`;
+            if (cpuSubEl) cpuSubEl.textContent = cpu.frequency_mhz ? `${(cpu.frequency_mhz / 1000).toFixed(2)} GHz // ${cpu.physical_cores || '?'}C / ${cpu.logical_cores || '?'}T` : 'frequency n/a';
+            if (memEl) memEl.textContent = `${Number(memory.percent || 0).toFixed(1)}%`;
+            if (memSubEl) memSubEl.textContent = `${JARVIS.Utils.bytes(memory.used)} / ${JARVIS.Utils.bytes(memory.total)}`;
+            if (diskEl) diskEl.textContent = `${Number(disk.percent || 0).toFixed(1)}%`;
+            if (diskSubEl) diskSubEl.textContent = `${JARVIS.Utils.bytes(disk.used)} / ${JARVIS.Utils.bytes(disk.total)}`;
+            if (netEl) netEl.textContent = `${JARVIS.Utils.bytes(network.upload_bps)}/s`;
+            if (netSubEl) netSubEl.textContent = `down ${JARVIS.Utils.bytes(network.download_bps)}/s`;
+          } else {
+            [cpuEl, memEl, diskEl, netEl].forEach(node => { if (node) node.textContent = '--'; });
+          }
+
+          renderProcesses(snap.processes);
+
+          if (noteEl) {
+            if (online) {
+              noteEl.innerHTML = 'Bearer token is minted on demand for write and command endpoints. Tokens are HMAC signed and short lived.';
+            } else {
+              noteEl.innerHTML = 'Start the local core:<br><code>python -m pip install -r requirements.txt</code><br><code>python run_jarvis_core.py</code>';
+            }
+          }
+        };
+
+        const refresh = async (announce = true) => {
+          await JARVIS.Core.poll(true);
+          if (announce) {
+            if (JARVIS.Core.online) log(`CORE LINK ACTIVE // ${JARVIS.Core.baseUrl}`, 'info');
+            else log(`CORE OFFLINE // ${JARVIS.Core.lastError}`, 'error');
+          }
+          render(JARVIS.Core.snapshot());
+        };
+
+        const runDirective = async () => {
+          const directive = directiveInput.value.trim();
+          if (!directive) return;
+          log(`> ${directive}`);
+          directiveInput.value = '';
+          if (!JARVIS.Core.online) await JARVIS.Core.poll();
+          if (!JARVIS.Core.online) {
+            log(`Python core offline // ${JARVIS.Core.lastError}`, 'error');
+            log('Start it with: python run_jarvis_core.py', 'warn');
+            return;
+          }
+          try {
+            const result = await JARVIS.Core.command(directive, cwd);
+            (result.output || []).forEach(line => log(line));
+            if (result.cwd) cwd = result.cwd;
+            if (result.exit_code) log(`[exit code ${result.exit_code}]`, 'error');
+          } catch (error) {
+            log(JARVIS.Core.describeError(error), 'error');
+          }
+        };
+
+        el.querySelector('#coreRefreshBtn').onclick = () => refresh(true);
+        el.querySelector('#coreRunBtn').onclick = () => runDirective();
+        el.querySelector('#coreDocsBtn').onclick = () => {
+          if (!JARVIS.Core.online) {
+            JARVIS.Notify.show('CORE OFFLINE', 'Start the Python core before opening the API docs.');
+            return;
+          }
+          window.open(JARVIS.Core.docsUrl(), '_blank', 'noopener');
+        };
+        el.querySelector('#coreAuthBtn').onclick = async () => {
+          const passcode = passcodeInput.value || JARVIS.Core.passcode;
+          try {
+            await JARVIS.Core.login(passcode);
+            passcodeInput.value = '';
+            log('CORE AUTHENTICATED // bearer token acquired', 'info');
+            JARVIS.Notify.show('PYTHON CORE', 'Authenticated directives unlocked.');
+            await refresh(false);
+          } catch (error) {
+            log(`AUTH FAILED // ${JARVIS.Core.describeError(error)}`, 'error');
+          }
+        };
+        directiveInput.onkeydown = (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            runDirective();
+          }
+        };
+
+        const unsubscribe = JARVIS.Core.subscribe(render);
+        win.el._cleanups.push(unsubscribe);
+
+        log('PYTHON CORE BRIDGE // READY', 'info');
+        log('Directives: sysinfo, ps, neofetch, core, metrics', 'muted');
+        log('Writes and commands use a short-lived HMAC bearer token.', 'muted');
+        JARVIS.Core.poll(true).then(() => render(JARVIS.Core.snapshot()));
       }
     },
 
@@ -1402,6 +2168,7 @@
   JARVIS.InitDesktop = function () {
     JARVIS.Taskbar.initClock();
     JARVIS.Menus.init();
+    JARVIS.Core.init();
 
     // Bind desktop icon launchers
     document.querySelectorAll('.desktop-icon').forEach(icon => {

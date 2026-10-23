@@ -763,6 +763,61 @@
       text-align: right;
     }
 
+    /* Python core tray indicator */
+    #tray-core {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 9px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #tray-core:hover {
+      border-color: var(--cyan);
+      color: var(--text);
+      background: rgba(0, 240, 255, 0.06);
+    }
+    #tray-core.online {
+      border-color: rgba(0, 255, 136, 0.45);
+      color: var(--green);
+    }
+    #tray-core.probing {
+      border-color: rgba(255, 170, 0, 0.4);
+      color: var(--amber);
+    }
+    .core-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 6px var(--red);
+      flex-shrink: 0;
+    }
+    #tray-core.online .core-dot,
+    .core-dot.online {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: corePulse 2s infinite;
+    }
+    #tray-core.probing .core-dot,
+    .core-dot.probing {
+      background: var(--amber);
+      box-shadow: 0 0 6px var(--amber);
+      animation: corePulse 1s infinite;
+    }
+    @keyframes corePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
     /* ==========================================================================
        5. START MENU (#start-menu)
        ========================================================================== */
@@ -1214,6 +1269,269 @@
       border-bottom: 1px solid rgba(0, 240, 255, 0.05);
     }
 
+    /* Python Core Bridge (.app-core) */
+    .app-core {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 16px;
+      background: #080c10;
+      overflow-y: auto;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .core-hero {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(0, 136, 255, 0.02));
+    }
+    .core-orb {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 0 18px rgba(0, 240, 255, 0.35), inset 0 0 12px rgba(0, 240, 255, 0.2);
+      flex-shrink: 0;
+    }
+    .core-orb svg {
+      width: 24px;
+      height: 24px;
+    }
+    .core-hero-copy {
+      flex: 1;
+      min-width: 0;
+    }
+    .core-kicker {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+    .core-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.05rem;
+      letter-spacing: 2px;
+      color: var(--cyan);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .core-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .core-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--cyan);
+      padding: 7px 12px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.18s;
+      flex-shrink: 0;
+    }
+    .core-btn:hover {
+      background: rgba(0, 240, 255, 0.1);
+      border-color: var(--cyan);
+    }
+    .core-btn.primary {
+      background: rgba(0, 240, 255, 0.13);
+      border-color: var(--cyan);
+    }
+    .core-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .core-metric {
+      border: 1px solid var(--border);
+      background: rgba(0, 240, 255, 0.03);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .core-metric span {
+      font-size: 0.6rem;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+    }
+    .core-metric strong {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      color: var(--cyan);
+    }
+    .core-metric small {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .core-columns {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 12px;
+    }
+    .core-panel {
+      border: 1px solid var(--border);
+      background: rgba(0, 240, 255, 0.02);
+      padding: 12px;
+      min-width: 0;
+    }
+    .core-panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.68rem;
+      color: var(--cyan);
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
+    }
+    .core-kv {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.7rem;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.06);
+      color: var(--text-muted);
+    }
+    .core-kv code {
+      color: var(--text);
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 65%;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .core-auth-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .core-auth-row input {
+      flex: 1;
+      min-width: 120px;
+      background: rgba(2, 10, 18, 0.8);
+      border: 1px solid var(--border);
+      color: var(--cyan);
+      padding: 7px 9px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      outline: none;
+    }
+    .core-auth-row input:focus {
+      border-color: var(--cyan);
+    }
+    .core-note {
+      margin-top: 10px;
+      font-size: 0.66rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+    .core-note code {
+      color: var(--cyan);
+    }
+    .core-process-list {
+      font-size: 0.68rem;
+    }
+    .core-process-head,
+    .core-process-row {
+      display: grid;
+      grid-template-columns: 1.6fr 0.6fr 0.6fr 0.8fr;
+      gap: 6px;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.06);
+    }
+    .core-process-head {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.58rem;
+      color: var(--cyan);
+      letter-spacing: 1px;
+    }
+    .core-process-row {
+      color: var(--text-muted);
+    }
+    .core-process-row span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .core-console-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 150px;
+    }
+    .core-console {
+      flex: 1;
+      min-height: 90px;
+      max-height: 180px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(0, 240, 255, 0.1);
+      padding: 9px;
+      font-size: 0.7rem;
+      line-height: 1.5;
+    }
+    .core-console-line {
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text);
+    }
+    .core-console-line.info { color: var(--cyan); }
+    .core-console-line.error { color: var(--red); }
+    .core-console-line.warn { color: var(--amber); }
+    .core-console-line.muted { color: var(--text-muted); }
+    .core-run-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .core-prompt {
+      color: var(--cyan);
+    }
+    .core-run-row input {
+      flex: 1;
+      background: rgba(2, 10, 18, 0.8);
+      border: 1px solid var(--border);
+      color: var(--cyan);
+      padding: 8px 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      outline: none;
+    }
+    .core-run-row input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px var(--cyan-glow);
+    }
+    .monitor-core-head {
+      border-color: rgba(0, 255, 136, 0.25);
+    }
+    .monitor-core-state { color: var(--text-muted); }
+    .monitor-core-state.online { color: var(--green); }
+    .monitor-core-state.offline { color: var(--red); }
+    .monitor-core-state.probing { color: var(--amber); }
+    @media (max-width: 760px) {
+      .core-columns { grid-template-columns: 1fr; }
+      .core-metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+
     /* Calculator (.app-calc) */
     .app-calc {
       height: 100%;
@@ -1486,6 +1804,10 @@
           <div class="icon-img"><i data-lucide="activity"></i></div>
           <div class="icon-label">Sys Monitor</div>
         </div>
+        <div class="desktop-icon" data-app="core">
+          <div class="icon-img"><i data-lucide="cpu"></i></div>
+          <div class="icon-label">Python Core</div>
+        </div>
         <div class="desktop-icon" data-app="editor">
           <div class="icon-img"><i data-lucide="file-text"></i></div>
           <div class="icon-label">Notepad</div>
@@ -1510,6 +1832,10 @@
       <div class="taskbar-separator"></div>
       <div id="running-apps"></div>
       <div id="system-tray">
+        <div id="tray-core" class="offline" title="Python Core offline">
+          <span class="core-dot offline"></span>
+          <span id="core-label">CORE // OFFLINE</span>
+        </div>
         <div class="tray-icon" title="Network Connected"><i data-lucide="wifi"></i></div>
         <div class="tray-icon" title="Audio Systems"><i data-lucide="volume-2"></i></div>
         <div class="tray-icon" title="Security Protocol Active"><i data-lucide="shield-check"></i></div>
@@ -1543,6 +1869,10 @@
         <div class="app-icon"><i data-lucide="activity"></i></div>
         <div class="app-name">Diagnostics</div>
       </div>
+      <div class="start-app-tile" data-app="core">
+        <div class="app-icon"><i data-lucide="cpu"></i></div>
+        <div class="app-name">Python Core</div>
+      </div>
       <div class="start-app-tile" data-app="editor">
         <div class="app-icon"><i data-lucide="file-text"></i></div>
         <div class="app-name">Text Editor</div>
@@ -1567,6 +1897,7 @@
   <div id="context-menu">
     <div class="ctx-item" data-action="new-file"><i data-lucide="file-plus" style="width:14px;height:14px"></i> New File</div>
     <div class="ctx-item" data-action="open-term"><i data-lucide="terminal" style="width:14px;height:14px"></i> Open Terminal</div>
+    <div class="ctx-item" data-action="core"><i data-lucide="cpu" style="width:14px;height:14px"></i> Python Core Bridge</div>
     <div class="ctx-separator"></div>
     <div class="ctx-item" data-action="refresh"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Refresh HUD</div>
     <div class="ctx-item" data-action="monitor"><i data-lucide="activity" style="width:14px;height:14px"></i> System Diagnostics</div>
