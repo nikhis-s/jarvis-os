@@ -1,0 +1,25 @@
+{
+  "name": "jarvis-os",
+  "version": "7.0.1",
+  "description": "J.A.R.V.I.S. Autonomous Desktop Environment & Holographic HUD Operating System",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve .",
+    "dev": "serve ."
+  },
+  "keywords": [
+    "jarvis",
+    "operating-system",
+    "web-os",
+    "stark-industries",
+    "hud",
+    "hologram",
+    "retro-futurism",
+    "interactive-desktop"
+  ],
+  "author": "Monish",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.2.4"
+  }
+}

@@ -1,0 +1,22 @@
+# Vercel
+.vercel
+.output
+
+# Node / Dependencies
+node_modules/
+package-lock.json
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# Windows temporary shortcut artifacts
+*.lnk

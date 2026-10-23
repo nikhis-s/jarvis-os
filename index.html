@@ -1,0 +1,1593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S. // Welcome Monish Sir</title>
+
+  <!-- Google Fonts: Orbitron, Rajdhani, Share Tech Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    /* ==========================================================================
+       JARVIS OS THEME & CSS VARIABLES
+       ========================================================================== */
+    :root {
+      --cyan: #00f0ff;
+      --cyan-glow: rgba(0, 240, 255, 0.4);
+      --cyan-soft: rgba(0, 240, 255, 0.08);
+      --blue: #0088ff;
+      --amber: #ffaa00;
+      --red: #ff3344;
+      --green: #00ff88;
+      --bg: #080c14;
+      --bg-surface: #0d1520;
+      --bg-elevated: #162030;
+      --border: rgba(0, 240, 255, 0.2);
+      --text: #d4f8ff;
+      --text-muted: #5a8a9f;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ==========================================================================
+       9. SCROLLBAR STYLING
+       ========================================================================== */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(8, 12, 20, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 240, 255, 0.25);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--cyan);
+    }
+
+    /* ==========================================================================
+       10. UTILITY & ANIMATION CLASSES
+       ========================================================================== */
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes logoPulse {
+      0% {
+        filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.45));
+        opacity: 0.88;
+        transform: scale(0.995);
+      }
+      100% {
+        filter: drop-shadow(0 0 35px rgba(0, 240, 255, 0.95));
+        opacity: 1;
+        transform: scale(1.005);
+      }
+    }
+
+    @keyframes arcSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes shakeCard {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-10px); }
+      40%, 80% { transform: translateX(10px); }
+    }
+
+    @keyframes arcSpinCounter {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(-360deg); }
+    }
+
+    @keyframes scanDown {
+      0% { top: 0%; opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+
+    @keyframes windowOpen {
+      from {
+        opacity: 0;
+        transform: scale(0.92);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes notifSlideIn {
+      from {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes notifSlideOut {
+      from {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(100px);
+      }
+    }
+
+    /* ==========================================================================
+       1. BOOT SCREEN (#boot-screen)
+       ========================================================================== */
+    #boot-screen {
+      position: fixed;
+      inset: 0;
+      background: #000000;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      padding: 24px;
+    }
+
+    .boot-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .boot-logo-container {
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .boot-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.3rem;
+      font-weight: 900;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #ffffff 0%, var(--cyan) 50%, var(--blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: logoPulse 2.4s ease-in-out infinite alternate;
+      text-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+    }
+
+    #boot-subtitle {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      letter-spacing: 2.5px;
+      margin-top: 6px;
+      margin-bottom: 22px;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    #boot-log {
+      width: 100%;
+      height: 180px;
+      max-height: 200px;
+      overflow: hidden;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--green);
+      line-height: 1.5;
+      background: rgba(0, 25, 15, 0.4);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      border-radius: 4px;
+      padding: 12px 14px;
+      box-sizing: border-box;
+      margin-bottom: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+    }
+
+    #boot-progress-wrap {
+      width: 400px;
+      max-width: 100%;
+      height: 6px;
+      background: rgba(0, 240, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #boot-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      box-shadow: 0 0 12px var(--cyan);
+      transition: width 0.15s ease-out;
+    }
+
+    /* ==========================================================================
+       2. LOGIN SCREEN (#login-screen)
+       ========================================================================== */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 9000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(16px);
+      background-image:
+        radial-gradient(ellipse at center, rgba(0, 136, 255, 0.12) 0%, transparent 70%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.89v12.72l11 6.35 11-6.35V17.89L14 11.54 3 17.89z' fill='%2300f0ff' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      padding: 2.5rem;
+      border: 1px solid var(--cyan);
+      clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+      backdrop-filter: blur(15px);
+      background: rgba(13, 21, 32, 0.9);
+      box-shadow: 0 0 40px rgba(0, 240, 255, 0.15), inset 0 0 30px rgba(0, 240, 255, 0.05);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .login-scan-line {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--cyan), #ffffff, var(--cyan), transparent);
+      box-shadow: 0 0 15px var(--cyan);
+      z-index: 10;
+    }
+    .login-scan-line.scanning {
+      display: block;
+      animation: scanDown 1.4s ease-in-out infinite;
+    }
+
+    .login-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px dashed var(--cyan);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      position: relative;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+      animation: arcSpin 12s linear infinite;
+    }
+
+    .login-avatar-text {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--cyan);
+      text-shadow: 0 0 10px var(--cyan);
+      animation: arcSpinCounter 12s linear infinite;
+      user-select: none;
+    }
+
+    .login-user-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 2.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .login-form-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    #login-password {
+      width: 100%;
+      background: rgba(2, 10, 18, 0.85);
+      border: 1px solid var(--border);
+      color: var(--cyan);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.95rem;
+      padding: 0.8rem 1rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
+      clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+    }
+    #login-password:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 16px var(--cyan-glow);
+    }
+    #login-password::placeholder {
+      color: rgba(90, 138, 159, 0.65);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+    }
+
+    #login-btn {
+      width: 100%;
+      padding: 0.85rem;
+      background: linear-gradient(135deg, var(--cyan) 0%, var(--blue) 100%);
+      color: #000000;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 800;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      border: none;
+      cursor: pointer;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      transition: all 0.2s ease;
+    }
+    #login-btn:hover {
+      box-shadow: 0 0 25px var(--cyan-glow);
+      filter: brightness(1.15);
+    }
+    #login-btn:active {
+      transform: scale(0.98);
+    }
+
+    #login-status {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 14px;
+      min-height: 18px;
+      letter-spacing: 1px;
+    }
+
+    /* ==========================================================================
+       3. MAIN OS VIEWPORT (#os-viewport) & 3a. DESKTOP (#desktop)
+       ========================================================================== */
+    #os-viewport {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: relative;
+    }
+
+    #desktop {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(ellipse at 50% 50%, rgba(0, 136, 255, 0.16) 0%, rgba(0, 240, 255, 0.05) 45%, transparent 75%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.89v12.72l11 6.35 11-6.35V17.89L14 11.54 3 17.89z' fill='%2300f0ff' fill-opacity='0.035' fill-rule='evenodd'/%3E%3C/svg%3E");
+    }
+
+    /* 3b. DESKTOP ICONS (#desktop-icons) */
+    #desktop-icons {
+      position: absolute;
+      inset: 0;
+      padding: 20px;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      gap: 8px;
+    }
+
+    .desktop-icon {
+      width: 88px;
+      height: 95px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .desktop-icon:hover {
+      background: rgba(0, 240, 255, 0.08);
+      border-color: rgba(0, 240, 255, 0.3);
+    }
+    .desktop-icon.selected {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--cyan);
+    }
+    .desktop-icon .icon-img {
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--cyan);
+    }
+    .desktop-icon .icon-img svg {
+      width: 30px;
+      height: 30px;
+    }
+    .desktop-icon .icon-label {
+      font-size: 0.75rem;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--text);
+      text-align: center;
+      max-width: 80px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    /* 3c. WINDOWS LAYER (#windows-layer) */
+    #windows-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* 3d. WINDOW STYLES (.jarvis-window) */
+    .jarvis-window {
+      position: absolute;
+      pointer-events: all;
+      min-width: 350px;
+      min-height: 250px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+      transition: box-shadow 0.2s, border-color 0.2s;
+      animation: windowOpen 0.2s ease;
+    }
+
+    .jarvis-window.focused {
+      border-color: rgba(0, 240, 255, 0.5);
+      box-shadow: 0 12px 48px rgba(0, 240, 255, 0.15);
+    }
+    .jarvis-window.minimized {
+      display: none !important;
+    }
+    .jarvis-window.maximized {
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      clip-path: none !important;
+      border-radius: 0 !important;
+    }
+
+    .window-titlebar {
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      background: rgba(0, 240, 255, 0.06);
+      border-bottom: 1px solid var(--border);
+      cursor: grab;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .window-titlebar:active {
+      cursor: grabbing;
+    }
+
+    .titlebar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+    }
+    .titlebar-icon {
+      color: var(--cyan);
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .titlebar-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+    .titlebar-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 1.5px;
+      color: var(--text);
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .titlebar-controls {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .window-ctrl-btn {
+      width: 28px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      transition: all 0.15s;
+      border-radius: 2px;
+    }
+    .window-ctrl-btn:hover {
+      background: rgba(0, 240, 255, 0.2);
+      color: var(--text);
+    }
+    .window-ctrl-btn.close-btn:hover {
+      background: rgba(255, 51, 68, 0.3);
+      color: var(--red);
+    }
+
+    .window-content {
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+
+    .window-resize-handle {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 18px;
+      height: 18px;
+      cursor: nwse-resize;
+      z-index: 5;
+    }
+    .window-resize-handle::after {
+      content: '';
+      position: absolute;
+      bottom: 3px;
+      right: 3px;
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid var(--cyan);
+      border-bottom: 2px solid var(--cyan);
+      opacity: 0.6;
+    }
+
+    /* ==========================================================================
+       4. TASKBAR (#taskbar)
+       ========================================================================== */
+    #taskbar {
+      height: 50px;
+      background: rgba(8, 12, 20, 0.95);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      z-index: 1000;
+      flex-shrink: 0;
+      backdrop-filter: blur(15px);
+    }
+
+    #start-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 2px solid var(--cyan);
+      background: rgba(0, 240, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-right: 8px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    #start-btn::after {
+      content: '';
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 10%, var(--cyan) 55%, transparent 85%);
+      box-shadow: 0 0 10px var(--cyan);
+    }
+    #start-btn:hover {
+      box-shadow: 0 0 20px var(--cyan-glow);
+      border-color: var(--cyan);
+    }
+    #start-btn.active {
+      background: rgba(0, 240, 255, 0.2);
+    }
+
+    .taskbar-separator {
+      width: 1px;
+      height: 28px;
+      background: var(--border);
+      margin: 0 8px;
+      flex-shrink: 0;
+    }
+
+    #running-apps {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+      overflow-x: auto;
+      align-items: center;
+    }
+
+    .taskbar-app {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .taskbar-app:hover {
+      background: rgba(0, 240, 255, 0.08);
+      color: var(--text);
+    }
+    .taskbar-app.active {
+      border-bottom-color: var(--cyan);
+      color: var(--cyan);
+      background: rgba(0, 240, 255, 0.1);
+    }
+
+    #system-tray {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-left: auto;
+      padding-left: 12px;
+      flex-shrink: 0;
+    }
+    .tray-icon {
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .tray-icon:hover {
+      color: var(--cyan);
+    }
+    .tray-icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .tray-datetime {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #tray-clock {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      min-width: 50px;
+      text-align: right;
+    }
+    #tray-date {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* ==========================================================================
+       5. START MENU (#start-menu)
+       ========================================================================== */
+    #start-menu {
+      position: fixed;
+      bottom: 58px;
+      left: 8px;
+      width: 420px;
+      max-height: 520px;
+      background: rgba(10, 16, 24, 0.97);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 240, 255, 0.1);
+      z-index: 2000;
+      display: none;
+      flex-direction: column;
+      animation: slideUp 0.22s ease-out;
+    }
+
+    .start-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .start-search-icon {
+      position: absolute;
+      left: 28px;
+      width: 16px;
+      height: 16px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    #start-search {
+      width: 100%;
+      background: rgba(2, 10, 18, 0.8);
+      border: 1px solid var(--border);
+      color: var(--cyan);
+      padding: 10px 14px 10px 36px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
+    }
+    #start-search:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+    #start-search::placeholder {
+      color: rgba(90, 138, 159, 0.6);
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    #start-apps-grid {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .start-app-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 16px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .start-app-tile:hover {
+      background: rgba(0, 240, 255, 0.1);
+      border-color: rgba(0, 240, 255, 0.3);
+    }
+    .start-app-tile .app-icon {
+      color: var(--cyan);
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .start-app-tile .app-icon svg {
+      width: 28px;
+      height: 28px;
+    }
+    .start-app-tile .app-name {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--text);
+      text-align: center;
+    }
+
+    .start-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    #power-btn {
+      background: transparent;
+      border: 1px solid var(--red);
+      color: var(--red);
+      padding: 6px 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    #power-btn:hover {
+      background: rgba(255, 51, 68, 0.15);
+      box-shadow: 0 0 12px rgba(255, 51, 68, 0.4);
+    }
+    #power-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ==========================================================================
+       6. CONTEXT MENU (#context-menu)
+       ========================================================================== */
+    #context-menu {
+      position: fixed;
+      z-index: 3000;
+      background: rgba(10, 16, 24, 0.97);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(15px);
+      min-width: 200px;
+      padding: 6px 0;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+      display: none;
+      clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%);
+    }
+
+    .ctx-item {
+      padding: 8px 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .ctx-item:hover {
+      background: rgba(0, 240, 255, 0.12);
+      color: var(--cyan);
+    }
+    .ctx-separator {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    /* ==========================================================================
+       7. NOTIFICATIONS (#notifications)
+       ========================================================================== */
+    #notifications {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .notification-toast {
+      pointer-events: all;
+      background: rgba(10, 16, 24, 0.95);
+      border: 1px solid var(--border);
+      padding: 14px 18px;
+      min-width: 300px;
+      max-width: 380px;
+      backdrop-filter: blur(12px);
+      animation: notifSlideIn 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+    }
+    .notification-toast.removing {
+      animation: notifSlideOut 0.3s ease forwards;
+    }
+
+    .notif-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .notif-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      color: var(--cyan);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .notif-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0 4px;
+    }
+    .notif-close:hover {
+      color: var(--cyan);
+    }
+    .notif-body {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* ==========================================================================
+       8. APP-SPECIFIC CSS
+       ========================================================================== */
+
+    /* Terminal (.app-terminal) */
+    .app-terminal {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #080c10;
+    }
+    .term-output {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--green);
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+    .term-input-line {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      border-top: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.3);
+    }
+    .term-prompt {
+      color: var(--cyan);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      white-space: nowrap;
+      margin-right: 8px;
+    }
+    .term-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--green);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      outline: none;
+      caret-color: var(--green);
+    }
+    .term-line-info {
+      color: var(--cyan);
+    }
+    .term-line-error {
+      color: var(--red);
+    }
+    .term-line-warn {
+      color: var(--amber);
+    }
+    .term-ascii {
+      color: var(--cyan);
+      font-family: monospace;
+      line-height: 1.2;
+    }
+
+    /* File Manager (.app-files) */
+    .app-files {
+      height: 100%;
+      display: flex;
+      background: var(--bg);
+    }
+    .files-sidebar {
+      width: 200px;
+      border-right: 1px solid var(--border);
+      padding: 12px;
+      overflow-y: auto;
+      flex-shrink: 0;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .files-sidebar-item {
+      padding: 6px 10px;
+      cursor: pointer;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 3px;
+      transition: 0.15s;
+    }
+    .files-sidebar-item:hover,
+    .files-sidebar-item.active {
+      background: rgba(0, 240, 255, 0.1);
+      color: var(--cyan);
+    }
+    .files-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .files-breadcrumb {
+      padding: 10px 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .files-breadcrumb span {
+      color: var(--cyan);
+      cursor: pointer;
+    }
+    .files-breadcrumb span:hover {
+      text-decoration: underline;
+    }
+    .files-grid {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 12px;
+      flex: 1;
+      overflow-y: auto;
+      align-content: start;
+    }
+    .file-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      border: 1px solid transparent;
+      transition: 0.15s;
+    }
+    .file-item:hover {
+      background: rgba(0, 240, 255, 0.08);
+      border-color: rgba(0, 240, 255, 0.2);
+    }
+    .file-item .file-icon {
+      color: var(--cyan);
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .file-item.folder .file-icon {
+      color: var(--amber);
+    }
+    .file-item .file-name {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text);
+      text-align: center;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* System Monitor (.app-monitor) */
+    .app-monitor {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #080c10;
+      padding: 16px;
+      gap: 16px;
+      overflow-y: auto;
+    }
+    .monitor-section {
+      background: rgba(0, 240, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 14px;
+    }
+    .monitor-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      color: var(--cyan);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .monitor-canvas {
+      width: 100%;
+      height: 120px;
+      display: block;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 240, 255, 0.1);
+    }
+    .monitor-stat {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text);
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+    .monitor-stat .stat-val {
+      color: var(--cyan);
+    }
+    .process-list {
+      width: 100%;
+    }
+    .process-header, .process-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 8px;
+      padding: 6px 0;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+    }
+    .process-header {
+      color: var(--cyan);
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+    }
+    .process-row {
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(0, 240, 255, 0.05);
+    }
+
+    /* Calculator (.app-calc) */
+    .app-calc {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #080c10;
+      padding: 16px;
+    }
+    .calc-display {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: right;
+      min-height: 70px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .calc-expr {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      min-height: 1.1em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .calc-result {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2rem;
+      color: #ffffff;
+      text-shadow: 0 0 10px var(--cyan-glow);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .calc-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      flex: 1;
+    }
+    .calc-btn {
+      background: rgba(0, 240, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      user-select: none;
+    }
+    .calc-btn:hover {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--cyan);
+    }
+    .calc-btn:active {
+      transform: scale(0.97);
+    }
+    .calc-btn.op {
+      color: var(--cyan);
+    }
+    .calc-btn.equals {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.3), rgba(0, 136, 255, 0.2));
+      color: #ffffff;
+      border-color: var(--cyan);
+    }
+    .calc-btn.clear {
+      color: var(--red);
+    }
+
+    /* Text Editor (.app-editor) */
+    .app-editor {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #080c10;
+    }
+    .editor-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .editor-toolbar-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .editor-toolbar-btn:hover {
+      border-color: var(--cyan);
+      color: var(--cyan);
+    }
+    .editor-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    .editor-line-numbers {
+      width: 45px;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px 8px;
+      text-align: right;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+      overflow: hidden;
+      user-select: none;
+      border-right: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .editor-textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      padding: 12px;
+      line-height: 1.55;
+      outline: none;
+      resize: none;
+      white-space: pre;
+      overflow-wrap: normal;
+      overflow-x: auto;
+    }
+
+    /* Settings (.app-settings) */
+    .app-settings {
+      height: 100%;
+      display: flex;
+      background: #080c10;
+    }
+    .settings-sidebar {
+      width: 180px;
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .settings-nav-item {
+      padding: 10px 20px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: 0.15s;
+    }
+    .settings-nav-item:hover,
+    .settings-nav-item.active {
+      color: var(--cyan);
+      background: rgba(0, 240, 255, 0.06);
+      border-left-color: var(--cyan);
+    }
+    .settings-panel {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .settings-group-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      color: var(--cyan);
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+    }
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.06);
+    }
+    .settings-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    .settings-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--cyan);
+    }
+    .color-swatches {
+      display: flex;
+      gap: 8px;
+    }
+    .color-swatch {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid var(--border);
+      transition: 0.2s;
+    }
+    .color-swatch:hover,
+    .color-swatch.active {
+      border-color: #ffffff;
+      box-shadow: 0 0 10px currentColor;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       1. BOOT SCREEN
+       ======================================================================== -->
+  <div id="boot-screen">
+    <div class="boot-content">
+      <div class="boot-logo-container">
+        <div class="boot-logo">WELCOME MONISH SIR</div>
+      </div>
+      <div id="boot-subtitle">J.A.R.V.I.S. PROTOCOL // MONISH WORKSTATION // ALL SYSTEMS ARMED</div>
+      <div id="boot-log"></div>
+      <div id="boot-progress-wrap">
+        <div id="boot-progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       2. LOGIN SCREEN (Hidden Initially)
+       ======================================================================== -->
+  <div id="login-screen">
+    <div class="login-card">
+      <div class="login-scan-line"></div>
+      <div class="login-avatar">
+        <span class="login-avatar-text">MS</span>
+      </div>
+      <div class="login-user-label">MONISH SIR</div>
+      <div class="login-form-wrap">
+        <input type="password" id="login-password" placeholder="ENTER ACCESS CODE..." autocomplete="off">
+        <button id="login-btn" type="button">AUTHENTICATE</button>
+      </div>
+      <div id="login-status">READY FOR BIOMETRIC / PASSPHRASE INPUT</div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       3. MAIN OS VIEWPORT (Hidden Initially)
+       ======================================================================== -->
+  <div id="os-viewport">
+    <!-- Desktop Area -->
+    <div id="desktop">
+      <!-- Desktop Icons -->
+      <div id="desktop-icons">
+        <div class="desktop-icon" data-app="terminal">
+          <div class="icon-img"><i data-lucide="terminal"></i></div>
+          <div class="icon-label">Terminal</div>
+        </div>
+        <div class="desktop-icon" data-app="files">
+          <div class="icon-img"><i data-lucide="folder"></i></div>
+          <div class="icon-label">Files</div>
+        </div>
+        <div class="desktop-icon" data-app="monitor">
+          <div class="icon-img"><i data-lucide="activity"></i></div>
+          <div class="icon-label">Sys Monitor</div>
+        </div>
+        <div class="desktop-icon" data-app="editor">
+          <div class="icon-img"><i data-lucide="file-text"></i></div>
+          <div class="icon-label">Notepad</div>
+        </div>
+        <div class="desktop-icon" data-app="calc">
+          <div class="icon-img"><i data-lucide="calculator"></i></div>
+          <div class="icon-label">Calculator</div>
+        </div>
+        <div class="desktop-icon" data-app="settings">
+          <div class="icon-img"><i data-lucide="settings"></i></div>
+          <div class="icon-label">Settings</div>
+        </div>
+      </div>
+
+      <!-- Windows Layer -->
+      <div id="windows-layer"></div>
+    </div>
+
+    <!-- 4. Taskbar -->
+    <div id="taskbar">
+      <div id="start-btn" title="ARC Reactor System Menu"></div>
+      <div class="taskbar-separator"></div>
+      <div id="running-apps"></div>
+      <div id="system-tray">
+        <div class="tray-icon" title="Network Connected"><i data-lucide="wifi"></i></div>
+        <div class="tray-icon" title="Audio Systems"><i data-lucide="volume-2"></i></div>
+        <div class="tray-icon" title="Security Protocol Active"><i data-lucide="shield-check"></i></div>
+        <div class="taskbar-separator"></div>
+        <div class="tray-datetime">
+          <div id="tray-clock">12:00:00</div>
+          <div id="tray-date">OCT 23 2026</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       5. START MENU (Hidden Initially)
+       ======================================================================== -->
+  <div id="start-menu">
+    <div class="start-header">
+      <i data-lucide="search" class="start-search-icon"></i>
+      <input type="text" id="start-search" placeholder="SEARCH DIRECTIVES OR APPS..." autocomplete="off">
+    </div>
+    <div id="start-apps-grid">
+      <div class="start-app-tile" data-app="terminal">
+        <div class="app-icon"><i data-lucide="terminal"></i></div>
+        <div class="app-name">Terminal</div>
+      </div>
+      <div class="start-app-tile" data-app="files">
+        <div class="app-icon"><i data-lucide="folder"></i></div>
+        <div class="app-name">File Manager</div>
+      </div>
+      <div class="start-app-tile" data-app="monitor">
+        <div class="app-icon"><i data-lucide="activity"></i></div>
+        <div class="app-name">Diagnostics</div>
+      </div>
+      <div class="start-app-tile" data-app="editor">
+        <div class="app-icon"><i data-lucide="file-text"></i></div>
+        <div class="app-name">Text Editor</div>
+      </div>
+      <div class="start-app-tile" data-app="calc">
+        <div class="app-icon"><i data-lucide="calculator"></i></div>
+        <div class="app-name">Calculator</div>
+      </div>
+      <div class="start-app-tile" data-app="settings">
+        <div class="app-icon"><i data-lucide="settings"></i></div>
+        <div class="app-name">Settings</div>
+      </div>
+    </div>
+    <div class="start-footer">
+      <button id="power-btn" type="button"><i data-lucide="power"></i> SHUTDOWN</button>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       6. CONTEXT MENU (Hidden Initially)
+       ======================================================================== -->
+  <div id="context-menu">
+    <div class="ctx-item" data-action="new-file"><i data-lucide="file-plus" style="width:14px;height:14px"></i> New File</div>
+    <div class="ctx-item" data-action="open-term"><i data-lucide="terminal" style="width:14px;height:14px"></i> Open Terminal</div>
+    <div class="ctx-separator"></div>
+    <div class="ctx-item" data-action="refresh"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i> Refresh HUD</div>
+    <div class="ctx-item" data-action="monitor"><i data-lucide="activity" style="width:14px;height:14px"></i> System Diagnostics</div>
+    <div class="ctx-separator"></div>
+    <div class="ctx-item" data-action="settings"><i data-lucide="sliders" style="width:14px;height:14px"></i> Preferences</div>
+  </div>
+
+  <!-- ========================================================================
+       7. NOTIFICATIONS
+       ======================================================================== -->
+  <div id="notifications"></div>
+
+  <!-- Lucide Icon Renderer & App Script -->
+  <script>
+    // Initialize icons once DOM is ready if Lucide is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+      }
+    });
+  </script>
+  <script src="jarvis-os.js"></script>
+</body>
+</html>
